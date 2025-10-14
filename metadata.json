@@ -1,0 +1,5 @@
+{
+  "name": "MCP AI Server",
+  "description": "A modern interface for managing an AI agent's local knowledge base and observing its project management tasks on a dynamic Kanban board.",
+  "requestFramePermissions": []
+}
