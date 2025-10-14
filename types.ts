@@ -14,8 +14,8 @@ export const CRAWL_DEPTHS = [1, 2, 3, 5] as const;
 export type CrawlDepth = typeof CRAWL_DEPTHS[number];
 
 export enum TaskStatus {
-  ToDo = 'To Do',
-  InProgress = 'In Progress',
+  ToDo = 'ToDo',
+  InProgress = 'InProgress',
   Review = 'Review',
   Done = 'Done',
 }

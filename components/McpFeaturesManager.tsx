@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
-import { mcpFeatures } from '../ide-config/mcpFeatures';
+import React, { useState, useEffect } from 'react';
 import { FeatureStatus, McpFeature } from '../types';
 import { View } from '../App';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { BeakerIcon } from './icons/BeakerIcon';
 import { BookOpenIcon } from './icons/BookOpenIcon';
-import { CodeIcon } from './icons/CodeIcon';
+import { PlusIcon } from './icons/PlusIcon';
+import { PencilIcon } from './icons/PencilIcon';
+import { TrashIcon } from './icons/TrashIcon';
+import { FeatureModal } from './FeatureModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+
 
 const statusStyles: Record<FeatureStatus, {
     textColor: string;
@@ -22,8 +26,10 @@ const FeatureStatusCard: React.FC<{
     status: FeatureStatus;
     onTest: (featureId: string) => void;
     onNavigateToDocs: (featureId: string) => void;
+    onEdit: (feature: McpFeature) => void;
+    onDelete: (feature: McpFeature) => void;
     isTesting: boolean;
-}> = ({ feature, status, onTest, onNavigateToDocs, isTesting }) => {
+}> = ({ feature, status, onTest, onNavigateToDocs, onEdit, onDelete, isTesting }) => {
     const { textColor, bgColor, ringColor } = statusStyles[status];
     return (
         <div className="bg-slate-800/60 p-4 rounded-lg ring-1 ring-slate-700 flex flex-col justify-between">
@@ -49,7 +55,13 @@ const FeatureStatusCard: React.FC<{
                     onClick={() => onNavigateToDocs(feature.id)}
                     className="w-full flex items-center justify-center gap-2 bg-cyan-500/20 text-cyan-300 font-bold py-2 px-3 rounded-md hover:bg-cyan-500/30 transition-colors duration-300 text-sm">
                     <BookOpenIcon className="w-5 h-5" />
-                    <span>Open Docs</span>
+                    <span>Docs</span>
+                </button>
+                 <button onClick={() => onEdit(feature)} className="p-2 bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600 transition-colors">
+                    <PencilIcon className="w-5 h-5" />
+                </button>
+                 <button onClick={() => onDelete(feature)} className="p-2 bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600 hover:text-red-400 transition-colors">
+                    <TrashIcon className="w-5 h-5" />
                 </button>
             </div>
         </div>
@@ -58,16 +70,37 @@ const FeatureStatusCard: React.FC<{
 
 
 export const McpFeaturesManager: React.FC<{ onNavigate: (view: View, context?: any) => void; }> = ({ onNavigate }) => {
-    const [featureStates, setFeatureStates] = useState<Record<string, { status: FeatureStatus }>>(
-        () => Object.fromEntries(mcpFeatures.map(f => [f.id, { status: FeatureStatus.NotConfigured }]))
-    );
+    const [features, setFeatures] = useState<McpFeature[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [featureStates, setFeatureStates] = useState<Record<string, { status: FeatureStatus }>>({});
     const [testingFeatureId, setTestingFeatureId] = useState<string | null>(null);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [featureToEdit, setFeatureToEdit] = useState<McpFeature | null>(null);
+    const [featureToDelete, setFeatureToDelete] = useState<McpFeature | null>(null);
+
+    const fetchFeatures = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/features');
+            const data = await response.json();
+            setFeatures(data);
+            setFeatureStates(Object.fromEntries(data.map((f: McpFeature) => [f.id, { status: FeatureStatus.NotConfigured }])));
+        } catch (error) {
+            console.error("Failed to fetch features:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFeatures();
+    }, []);
 
     const handleRunTest = (featureId: string) => {
         setTestingFeatureId(featureId);
-        // Simulate test run
         setTimeout(() => {
-            const isSuccess = Math.random() > 0.2; // 80% chance of success
+            const isSuccess = Math.random() > 0.2;
             setFeatureStates(prev => ({
                 ...prev,
                 [featureId]: { status: isSuccess ? FeatureStatus.Healthy : FeatureStatus.Degraded }
@@ -77,28 +110,82 @@ export const McpFeaturesManager: React.FC<{ onNavigate: (view: View, context?: a
     };
 
     const handleNavigateToDocs = (featureId: string) => {
-        // In a real app, you might pass the featureId in the context
         onNavigate('knowledge', { featureId });
+    };
+    
+    const handleSaveFeature = async (featureData: Omit<McpFeature, 'id'> | McpFeature) => {
+        const isEditing = 'id' in featureData;
+        const url = isEditing ? `/api/features/${featureData.id}` : '/api/features';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(featureData)
+        });
+        
+        setIsModalOpen(false);
+        fetchFeatures();
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!featureToDelete) return;
+        await fetch(`/api/features/${featureToDelete.id}`, { method: 'DELETE' });
+        setFeatureToDelete(null);
+        fetchFeatures();
     };
 
     return (
-        <div className="bg-slate-800/50 ring-1 ring-slate-700 rounded-xl p-6 animate-fade-in">
-            <h2 className="text-xl font-semibold text-white mb-2">MCP Features</h2>
-            <p className="text-slate-400 mb-6 text-sm max-w-2xl">
-                Manage and validate the capabilities of your MCP servers. Run tests to ensure each feature is healthy and configured correctly.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mcpFeatures.map(feature => (
-                    <FeatureStatusCard 
-                        key={feature.id}
-                        feature={feature}
-                        status={featureStates[feature.id].status}
-                        onTest={handleRunTest}
-                        onNavigateToDocs={handleNavigateToDocs}
-                        isTesting={testingFeatureId === feature.id}
-                    />
-                ))}
+        <>
+            <div className="bg-slate-800/50 ring-1 ring-slate-700 rounded-xl p-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">MCP Features</h2>
+                        <p className="text-slate-400 text-sm max-w-2xl">
+                            Manage and validate the capabilities of your MCP servers. Run tests to ensure each feature is healthy and configured correctly.
+                        </p>
+                    </div>
+                    <button onClick={() => { setFeatureToEdit(null); setIsModalOpen(true); }} className="flex-shrink-0 flex items-center justify-center gap-2 bg-cyan-500 text-slate-900 font-bold py-2 px-4 rounded-md hover:bg-cyan-400 transition-colors duration-300 text-sm">
+                        <PlusIcon className="w-5 h-5" />
+                        Add Feature
+                    </button>
+                </div>
+                {isLoading ? (
+                    <div className="flex justify-center items-center p-16"><SpinnerIcon className="w-8 h-8 text-cyan-400 animate-spin" /></div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {features.map(feature => (
+                            <FeatureStatusCard 
+                                key={feature.id}
+                                feature={feature}
+                                status={(featureStates[feature.id] || {status: FeatureStatus.NotConfigured}).status}
+                                onTest={handleRunTest}
+                                onNavigateToDocs={handleNavigateToDocs}
+                                onEdit={() => { setFeatureToEdit(feature); setIsModalOpen(true); }}
+                                onDelete={() => setFeatureToDelete(feature)}
+                                isTesting={testingFeatureId === feature.id}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
-        </div>
+
+            <FeatureModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSave={handleSaveFeature}
+                featureToEdit={featureToEdit}
+            />
+
+            {featureToDelete && (
+                <ConfirmDeleteModal
+                    isOpen={!!featureToDelete}
+                    onClose={() => setFeatureToDelete(null)}
+                    onConfirm={handleDeleteConfirm}
+                    itemTitle={featureToDelete.label}
+                    itemType="Feature"
+                />
+            )}
+        </>
     );
 };

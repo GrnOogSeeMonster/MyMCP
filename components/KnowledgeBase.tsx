@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PlusIcon } from './icons/PlusIcon';
 import { SearchIcon } from './icons/SearchIcon';
-import { KnowledgeType, KnowledgeEntry } from '../types';
+import { KnowledgeType, KnowledgeEntry, McpFeature } from '../types';
 import { CodeIcon } from './icons/CodeIcon';
 import { BriefcaseIcon } from './icons/BriefcaseIcon';
 import { GlobeIcon } from './icons/GlobeIcon';
@@ -12,7 +12,6 @@ import { TrashIcon } from './icons/TrashIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { EditKnowledgeModal } from './EditKnowledgeModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { mcpFeatures } from '../ide-config/mcpFeatures';
 import { FeatureDocPage } from './FeatureDocPage';
 import { BeakerIcon } from './icons/BeakerIcon';
 import { AddKnowledgeModal } from './AddKnowledgeModal';
@@ -106,6 +105,7 @@ const KnowledgeEntryCard: React.FC<{
 export const KnowledgeBase: React.FC<{}> = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
+  const [features, setFeatures] = useState<McpFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<'all' | KnowledgeType>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -115,21 +115,26 @@ export const KnowledgeBase: React.FC<{}> = () => {
   const [entryToEdit, setEntryToEdit] = useState<KnowledgeEntry | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<KnowledgeEntry | null>(null);
 
-  const fetchEntries = async () => {
+  const fetchData = async () => {
     try {
         setIsLoading(true);
-        const response = await fetch('/api/knowledge');
-        const data = await response.json();
-        setEntries(data);
+        const [entriesRes, featuresRes] = await Promise.all([
+            fetch('/api/knowledge'),
+            fetch('/api/features')
+        ]);
+        const entriesData = await entriesRes.json();
+        const featuresData = await featuresRes.json();
+        setEntries(entriesData);
+        setFeatures(featuresData);
     } catch (error) {
-        console.error('Failed to fetch knowledge entries:', error);
+        console.error('Failed to fetch data:', error);
     } finally {
         setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEntries();
+    fetchData();
   }, []);
 
   const allTags = useMemo(() => {
@@ -161,7 +166,7 @@ export const KnowledgeBase: React.FC<{}> = () => {
         body: JSON.stringify(newEntryData)
     });
     if (response.ok) {
-        fetchEntries();
+        fetchData();
     }
   };
 
@@ -172,7 +177,7 @@ export const KnowledgeBase: React.FC<{}> = () => {
         body: JSON.stringify(updatedEntry)
     });
     if (response.ok) {
-        fetchEntries();
+        fetchData();
     }
     setEntryToEdit(null);
   };
@@ -183,7 +188,7 @@ export const KnowledgeBase: React.FC<{}> = () => {
         method: 'DELETE'
     });
     if (response.ok) {
-        fetchEntries();
+        fetchData();
     }
     setEntryToDelete(null);
   };
@@ -203,8 +208,8 @@ export const KnowledgeBase: React.FC<{}> = () => {
     }`;
 
   const selectedFeature = useMemo(() => {
-    return mcpFeatures.find(f => f.id === selectedFeatureId);
-  }, [selectedFeatureId]);
+    return features.find(f => f.id === selectedFeatureId);
+  }, [selectedFeatureId, features]);
   
   const renderContent = () => {
     if (isLoading) {
@@ -261,7 +266,7 @@ export const KnowledgeBase: React.FC<{}> = () => {
                         MCP Features
                     </h3>
                     <nav className="space-y-1">
-                        {mcpFeatures.map(feature => (
+                        {features.map(feature => (
                              <a
                                 key={feature.id}
                                 href="#"

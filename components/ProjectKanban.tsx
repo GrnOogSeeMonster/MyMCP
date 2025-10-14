@@ -16,8 +16,16 @@ const COLUMN_COLORS: Record<TaskStatus, string> = {
   [TaskStatus.Done]: 'border-green-500',
 };
 
+const statusDisplayMap: Record<TaskStatus, string> = {
+  [TaskStatus.ToDo]: 'To Do',
+  [TaskStatus.InProgress]: 'In Progress',
+  [TaskStatus.Review]: 'Review',
+  [TaskStatus.Done]: 'Done',
+};
+
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
     [TaskPriority.High]: 'border-l-red-500',
+    // FIX: Corrected the key from TaskStatus.InProgress to TaskPriority.Medium.
     [TaskPriority.Medium]: 'border-l-blue-500',
     [TaskPriority.Low]: 'border-l-slate-500',
 };
@@ -60,7 +68,7 @@ const KanbanColumn: React.FC<{
     <div className="flex-1 min-w-[280px] bg-slate-900/50 rounded-lg p-3">
       <div className={`flex items-center justify-between gap-2 mb-4 pb-2 border-b-2 ${COLUMN_COLORS[status]}`}>
         <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-white">{status}</h3>
+            <h3 className="font-semibold text-white">{statusDisplayMap[status]}</h3>
             <span className="bg-slate-700 text-slate-300 text-xs font-bold px-2 py-0.5 rounded-full">{tasks.length}</span>
         </div>
         {status === TaskStatus.ToDo && onAddTask && (

@@ -1,7 +1,7 @@
-import React from 'react';
-import { mcpFeatures } from '../ide-config/mcpFeatures';
+import React, { useState, useEffect } from 'react';
 import { McpFeature, FeatureAdoptionStatus } from '../types';
 import { BeakerIcon } from './icons/BeakerIcon';
+import { SpinnerIcon } from './icons/SpinnerIcon';
 
 const ADOPTION_COLUMNS: FeatureAdoptionStatus[] = [
     FeatureAdoptionStatus.Backlog,
@@ -55,17 +55,44 @@ const FeatureColumn: React.FC<{
 };
 
 export const FeatureAdoptionBoard: React.FC = () => {
-  return (
-    <div className="animate-fade-in">
-        <div className="flex gap-4 overflow-x-auto pb-4">
-        {ADOPTION_COLUMNS.map(status => (
-            <FeatureColumn
-                key={status}
-                status={status}
-                features={mcpFeatures.filter(feature => feature.adoptionStatus === status)}
-            />
-        ))}
+    const [features, setFeatures] = useState<McpFeature[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchFeatures = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/features');
+                const data = await response.json();
+                setFeatures(data);
+            } catch (error) {
+                console.error("Failed to fetch features:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchFeatures();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center p-16">
+                <SpinnerIcon className="w-8 h-8 text-cyan-400 animate-spin" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="animate-fade-in">
+            <div className="flex gap-4 overflow-x-auto pb-4">
+            {ADOPTION_COLUMNS.map(status => (
+                <FeatureColumn
+                    key={status}
+                    status={status}
+                    features={features.filter(feature => feature.adoptionStatus === status)}
+                />
+            ))}
+            </div>
         </div>
-    </div>
-  );
+    );
 };
