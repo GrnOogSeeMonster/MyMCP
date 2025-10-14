@@ -3,7 +3,7 @@ import { FeatureStatus, McpFeature } from '../types';
 import { View } from '../App';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { BeakerIcon } from './icons/BeakerIcon';
-import { BookOpenIcon } from './icons/BookOpenIcon';
+import { InfoIcon } from './icons/InfoIcon';
 import { PlusIcon } from './icons/PlusIcon';
 import { PencilIcon } from './icons/PencilIcon';
 import { TrashIcon } from './icons/TrashIcon';
@@ -18,6 +18,7 @@ const statusStyles: Record<FeatureStatus, {
 }> = {
     [FeatureStatus.Healthy]: { textColor: 'text-green-400', bgColor: 'bg-green-500/10', ringColor: 'ring-green-500/30' },
     [FeatureStatus.Degraded]: { textColor: 'text-amber-400', bgColor: 'bg-amber-500/10', ringColor: 'ring-amber-500/30' },
+    [FeatureStatus.Failing]: { textColor: 'text-red-400', bgColor: 'bg-red-500/10', ringColor: 'ring-red-500/30' },
     [FeatureStatus.NotConfigured]: { textColor: 'text-slate-500', bgColor: 'bg-slate-500/10', ringColor: 'ring-slate-500/30' },
 };
 
@@ -25,11 +26,11 @@ const FeatureStatusCard: React.FC<{
     feature: McpFeature;
     status: FeatureStatus;
     onTest: (featureId: string) => void;
-    onNavigateToDocs: (featureId: string) => void;
+    onHelp: (feature: McpFeature) => void;
     onEdit: (feature: McpFeature) => void;
     onDelete: (feature: McpFeature) => void;
     isTesting: boolean;
-}> = ({ feature, status, onTest, onNavigateToDocs, onEdit, onDelete, isTesting }) => {
+}> = ({ feature, status, onTest, onHelp, onEdit, onDelete, isTesting }) => {
     const { textColor, bgColor, ringColor } = statusStyles[status];
     return (
         <div className="bg-slate-800/60 p-4 rounded-lg ring-1 ring-slate-700 flex flex-col justify-between">
@@ -52,10 +53,11 @@ const FeatureStatusCard: React.FC<{
                     <span>{isTesting ? 'Testing...' : 'Run Test'}</span>
                 </button>
                 <button 
-                    onClick={() => onNavigateToDocs(feature.id)}
-                    className="w-full flex items-center justify-center gap-2 bg-cyan-500/20 text-cyan-300 font-bold py-2 px-3 rounded-md hover:bg-cyan-500/30 transition-colors duration-300 text-sm">
-                    <BookOpenIcon className="w-5 h-5" />
-                    <span>Docs</span>
+                    onClick={() => onHelp(feature)}
+                    aria-label={`Help for ${feature.label}`}
+                    className="p-2 bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600 transition-colors"
+                    title="Help">
+                    <InfoIcon className="w-5 h-5" />
                 </button>
                  <button onClick={() => onEdit(feature)} className="p-2 bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600 transition-colors">
                     <PencilIcon className="w-5 h-5" />
@@ -78,6 +80,8 @@ export const McpFeaturesManager: React.FC<{ onNavigate: (view: View, context?: a
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [featureToEdit, setFeatureToEdit] = useState<McpFeature | null>(null);
     const [featureToDelete, setFeatureToDelete] = useState<McpFeature | null>(null);
+    const [showGlobalHelp, setShowGlobalHelp] = useState(false);
+    const [helpFeature, setHelpFeature] = useState<McpFeature | null>(null);
 
     const fetchFeatures = async () => {
         try {
@@ -109,8 +113,8 @@ export const McpFeaturesManager: React.FC<{ onNavigate: (view: View, context?: a
         }, 2000);
     };
 
-    const handleNavigateToDocs = (featureId: string) => {
-        onNavigate('knowledge', { featureId });
+    const handleOpenHelp = (feature: McpFeature) => {
+        setHelpFeature(feature);
     };
     
     const handleSaveFeature = async (featureData: Omit<McpFeature, 'id'> | McpFeature) => {
@@ -145,10 +149,16 @@ export const McpFeaturesManager: React.FC<{ onNavigate: (view: View, context?: a
                             Manage and validate the capabilities of your MCP servers. Run tests to ensure each feature is healthy and configured correctly.
                         </p>
                     </div>
-                    <button onClick={() => { setFeatureToEdit(null); setIsModalOpen(true); }} className="flex-shrink-0 flex items-center justify-center gap-2 bg-cyan-500 text-slate-900 font-bold py-2 px-4 rounded-md hover:bg-cyan-400 transition-colors duration-300 text-sm">
-                        <PlusIcon className="w-5 h-5" />
-                        Add Feature
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setShowGlobalHelp(true)} className="flex-shrink-0 flex items-center justify-center gap-2 bg-slate-700 text-slate-200 font-bold py-2 px-4 rounded-md hover:bg-slate-600 transition-colors duration-300 text-sm" aria-label="Help">
+                            <InfoIcon className="w-5 h-5" />
+                            Help
+                        </button>
+                        <button onClick={() => { setFeatureToEdit(null); setIsModalOpen(true); }} className="flex-shrink-0 flex items-center justify-center gap-2 bg-cyan-500 text-slate-900 font-bold py-2 px-4 rounded-md hover:bg-cyan-400 transition-colors duration-300 text-sm">
+                            <PlusIcon className="w-5 h-5" />
+                            Add Feature
+                        </button>
+                    </div>
                 </div>
                 {isLoading ? (
                     <div className="flex justify-center items-center p-16"><SpinnerIcon className="w-8 h-8 text-cyan-400 animate-spin" /></div>
@@ -160,7 +170,7 @@ export const McpFeaturesManager: React.FC<{ onNavigate: (view: View, context?: a
                                 feature={feature}
                                 status={(featureStates[feature.id] || {status: FeatureStatus.NotConfigured}).status}
                                 onTest={handleRunTest}
-                                onNavigateToDocs={handleNavigateToDocs}
+                                onHelp={handleOpenHelp}
                                 onEdit={() => { setFeatureToEdit(feature); setIsModalOpen(true); }}
                                 onDelete={() => setFeatureToDelete(feature)}
                                 isTesting={testingFeatureId === feature.id}
@@ -185,6 +195,91 @@ export const McpFeaturesManager: React.FC<{ onNavigate: (view: View, context?: a
                     itemTitle={featureToDelete.label}
                     itemType="Feature"
                 />
+            )}
+
+            {showGlobalHelp && (
+                <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowGlobalHelp(false)}>
+                    <div className="absolute inset-0 bg-black/60" />
+                    <div className="relative bg-slate-800/90 w-full max-w-3xl mx-4 rounded-xl ring-1 ring-slate-700 p-6 text-slate-200" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold text-white">MCP Features — Getting Started</h3>
+                            <button onClick={() => setShowGlobalHelp(false)} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Close</button>
+                        </div>
+                        <div className="space-y-4 text-sm">
+                            <p>This page lets you manage and validate the capabilities of your MCP servers. Add features, check their health continuously, and run tests to ensure everything works.</p>
+                            <div>
+                                <h4 className="font-semibold text-white">How to add a feature</h4>
+                                <ol className="list-decimal list-inside space-y-1">
+                                    <li>Click <b>Add Feature</b>, choose a server and capability.</li>
+                                    <li>Fill required fields; placeholders like ${"${SET_ME_SECURELY}"} must be set in a secure env (see User Rules).</li>
+                                    <li>Save and <b>Run Test</b>.</li>
+                                    <li>Confirm the status turns <b>Healthy</b>.</li>
+                                </ol>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-white">Status legend</h4>
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>Healthy: server reachable; last test passed.</li>
+                                    <li>Degraded: reachable but slow or warning; re-test or check configuration.</li>
+                                    <li>Failing: unreachable or failing test; see troubleshooting.</li>
+                                    <li>Not Configured: required fields missing.</li>
+                                </ul>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button onClick={() => onNavigate('settings', { section: 'user-rules' })} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Open User Rules</button>
+                                <button onClick={() => onNavigate('projects')} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Open Project Manager</button>
+                                <button onClick={() => onNavigate('knowledge')} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Open Knowledge Base</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {helpFeature && (
+                <div role="dialog" aria-modal="true" className="fixed inset-0 z-40" onClick={() => setHelpFeature(null)}>
+                    <div className="absolute inset-0 bg-black/60" />
+                    <aside className="absolute right-0 top-0 h-full w-full max-w-md bg-slate-800/95 ring-1 ring-slate-700 p-6 overflow-y-auto text-slate-200" onClick={e => e.stopPropagation()} aria-label={`Help for ${helpFeature.label}`}>
+                        <h3 className="text-lg font-semibold text-white mb-2">{helpFeature.label} — Help</h3>
+                        <p className="text-sm text-slate-300 mb-3">{helpFeature.description}</p>
+                        <div className="space-y-3 text-sm">
+                            <div>
+                                <h4 className="font-semibold text-white">Inputs & Outputs</h4>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <div className="font-semibold">Inputs</div>
+                                        <ul className="list-disc list-inside">
+                                            {Object.entries(helpFeature.inputs || {}).map(([k,v]) => (<li key={k}><b>{k}</b>: {String(v)}</li>))}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold">Outputs</div>
+                                        <ul className="list-disc list-inside">
+                                            {Object.entries(helpFeature.outputs || {}).map(([k,v]) => (<li key={k}><b>{k}</b>: {String(v)}</li>))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-white">Quick steps</h4>
+                                <ol className="list-decimal list-inside space-y-1">
+                                    <li>Ensure configuration values are set (see User Rules).</li>
+                                    <li>Open your IDE and confirm MCP servers are running.</li>
+                                    <li>Click Run Test on this card.</li>
+                                    <li>Review status and logs if failing.</li>
+                                </ol>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-white">Validation</h4>
+                                <p>Run Test performs a non-destructive check against the configured endpoint and validates the expected response shape.</p>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button onClick={() => onNavigate('settings', { section: 'user-rules' })} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Open User Rules</button>
+                                <button onClick={() => onNavigate('projects')} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Open Project Manager</button>
+                                <button onClick={() => onNavigate('knowledge')} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600">Open Knowledge Base</button>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
             )}
         </>
     );

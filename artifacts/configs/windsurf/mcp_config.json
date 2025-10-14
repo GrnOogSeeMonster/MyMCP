@@ -1,0 +1,9 @@
+{
+  "servers": [
+    { "id": "mcp-core-agent", "type": "stdio", "command": "node", "args": ["./servers/core/dist/index.js"] },
+    { "id": "mcp-aws-helper", "type": "stdio", "command": "python", "args": ["-m","mcp_aws_helper"] },
+    { "id": "mcp-local-knowledge", "type": "http", "command": "node", "args": ["./servers/knowledge/dist/index.js","--port","8001"] }
+  ]
+}
+
+

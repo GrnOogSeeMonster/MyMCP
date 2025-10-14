@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        Int      @id @default(autoincrement())
+  title     String
+  overview  String
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  tasks     Task[]
+}
+
+enum TaskStatus {
+  ToDo
+  InProgress
+  Review
+  Done
+}
+
+enum TaskPriority {
+  High
+  Medium
+  Low
+}
+
+model Task {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String
+  status      TaskStatus
+  priority    TaskPriority
+  projectId   Int
+  project     Project     @relation(fields: [projectId], references: [id])
+}
+
+enum KnowledgeType {
+  technical
+  business
+}
+
+model KnowledgeEntry {
+  id        Int          @id @default(autoincrement())
+  type      KnowledgeType
+  sourceType String
+  source    String
+  title     String
+  tags      Json
+}
+
+model AiUserRule {
+  id          String @id
+  title       String
+  description String
+  category    String
+  isActive    Boolean
+}
+
+enum FeatureAdoptionStatus {
+  Backlog
+  InProgress
+  InReview
+  Validated
+  Released
+}
+
+model McpFeature {
+  id              String @id
+  label           String
+  description     String
+  endpoint        String
+  inputs          Json
+  outputs         Json
+  ideSurfacing    Json
+  examples        Json
+  deps            Json
+  secrets         Json
+  env             Json
+  validation      Json
+  docsSlug        String
+  risk            String?
+  adoptionStatus  FeatureAdoptionStatus
+}
+
+

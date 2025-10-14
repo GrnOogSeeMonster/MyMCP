@@ -1,0 +1,7 @@
+﻿{
+    "zed":  "C:\\Users\\renie\\.config\\zed\\settings.json",
+    "neovim":  {
+                   "init":  "C:\\Users\\renie\\AppData\\Local\\nvim\\init.lua",
+                   "lua":  "C:\\Users\\renie\\AppData\\Local\\nvim\\lua\\mcp.lua"
+               }
+}

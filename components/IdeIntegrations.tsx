@@ -4,6 +4,8 @@ import { mcpServerRegistry } from '../ide-config/mcpServerRegistry';
 import { IdeKey, IdeDetectionStatus, IdeDetectionResult } from '../types';
 import { IdeCard } from './IdeCard';
 import { ManualStepsModal } from './ManualStepsModal';
+import { IdeIntegrationModal } from './IdeIntegrationModal';
+import { IDE_USER_RULES } from '../ide-config/ideUserRules';
 
 const mockDetection: Record<IdeKey, IdeDetectionResult> = {
     vscode: { status: IdeDetectionStatus.Detected, version: "1.85.1", path: "~/Applications/VSCode.app" },
@@ -19,6 +21,8 @@ export const IdeIntegrations: React.FC = () => {
     const [ideStates, setIdeStates] = useState<Partial<Record<IdeKey, IdeDetectionResult>>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+    const [activeIdeKey, setActiveIdeKey] = useState<IdeKey | null>(null);
+    const [showIntegrationModal, setShowIntegrationModal] = useState(false);
 
     useEffect(() => {
         // Simulate IDE detection on component mount
@@ -30,6 +34,11 @@ export const IdeIntegrations: React.FC = () => {
 
     const handleConfigure = (ideKey: IdeKey) => {
         setIdeStates(prev => ({ ...prev, [ideKey]: { ...prev[ideKey]!, status: IdeDetectionStatus.Configured } }));
+    };
+
+    const handleOpenIntegration = (ideKey: IdeKey) => {
+        setActiveIdeKey(ideKey);
+        setShowIntegrationModal(true);
     };
     
     const handleShowManualSteps = (ideKey: IdeKey) => {
@@ -57,6 +66,7 @@ export const IdeIntegrations: React.FC = () => {
                         isLoading={isLoading}
                         onConfigure={handleConfigure}
                         onShowManualSteps={handleShowManualSteps}
+                        onOpenIntegration={handleOpenIntegration}
                     />
                 ))}
             </div>
@@ -69,6 +79,30 @@ export const IdeIntegrations: React.FC = () => {
                 >
                     {modalContent.content}
                 </ManualStepsModal>
+            )}
+
+            {showIntegrationModal && activeIdeKey && (
+                <IdeIntegrationModal
+                    isOpen={showIntegrationModal}
+                    onClose={() => setShowIntegrationModal(false)}
+                    ideLabel={ideRegistry[activeIdeKey].label}
+                    autoConfigRenderer={
+                        <div className="space-y-3">
+                            <p className="text-sm text-slate-300">Click the button below to open your IDE and apply MCP configuration.</p>
+                            <button
+                                onClick={() => {
+                                    // Placeholder: could trigger a URL handler or file write for auto configuration
+                                    window.open('about:blank', '_blank');
+                                }}
+                                className="inline-flex items-center justify-center gap-2 bg-cyan-500 text-slate-900 font-bold py-2 px-3 rounded-md hover:bg-cyan-400 transition-colors duration-300 text-sm"
+                            >
+                                Apply MCP Configuration
+                            </button>
+                        </div>
+                    }
+                    manualRenderer={ideRegistry[activeIdeKey].manualInstructions?.(ideRegistry[activeIdeKey], mcpServerRegistry) || <p className="text-sm text-slate-300">No manual steps necessary.</p>}
+                    userRules={IDE_USER_RULES}
+                />
             )}
         </div>
     );

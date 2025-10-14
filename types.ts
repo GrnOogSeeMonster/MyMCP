@@ -101,6 +101,7 @@ export interface McpServer {
 export enum FeatureStatus {
     Healthy = 'Healthy',
     Degraded = 'Degraded',
+    Failing = 'Failing',
     NotConfigured = 'Not Configured',
 }
   

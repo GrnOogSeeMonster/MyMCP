@@ -1,0 +1,9 @@
+{
+  "lsp": {
+    "mcp-core-agent": { "command": "node", "args": ["./servers/core/dist/index.js"] },
+    "mcp-aws-helper": { "command": "python", "args": ["-m","mcp_aws_helper"] },
+    "mcp-local-knowledge": { "command": "node", "args": ["./servers/knowledge/dist/index.js","--port","8001"] }
+  }
+}
+
+

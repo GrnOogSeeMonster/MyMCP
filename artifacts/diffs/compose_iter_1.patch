@@ -1,0 +1,5 @@
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@
+-    command: ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npx prisma db seed"]
++    command: ["sh", "-c", "npx prisma generate && npx prisma db push && npx prisma db seed"]
